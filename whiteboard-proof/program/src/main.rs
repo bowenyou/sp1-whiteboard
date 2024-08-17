@@ -1,11 +1,11 @@
 #![no_main]
+sp1_zkvm::entrypoint!(main);
 
 use std::io::Cursor;
 
 use image::{ImageReader, Rgb, RgbImage};
 use imageproc::{drawing::draw_line_segment_mut, stats::root_mean_squared_error};
 use serde::Deserialize;
-sp1_zkvm::entrypoint!(main);
 
 #[derive(Deserialize, Debug)]
 enum StrokeType {
