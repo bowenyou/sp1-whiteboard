@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use image::{ImageReader, Rgb, RgbImage};
-use imageproc::drawing::draw_line_segment_mut;
+use imageproc::{drawing::draw_line_segment_mut, stats::root_mean_squared_error};
 use serde::Deserialize;
 sp1_zkvm::entrypoint!(main);
 
@@ -21,8 +21,10 @@ struct Stroke {
     color: (u8, u8, u8),
 }
 
+const THRESHOLD: f64 = 20.0_f64;
+
 fn main() {
-    let output_image_data = include_bytes!("../../output.png").to_vec();
+    let output_image_data = include_bytes!("../../whiteboard.png").to_vec();
     let cursor = Cursor::new(output_image_data);
     let output_image = ImageReader::new(cursor)
         .with_guessed_format()
@@ -33,7 +35,7 @@ fn main() {
 
     let dimensions = output_image.dimensions();
 
-    let strokes_string = include_str!("../../fake_strokes");
+    let strokes_string = include_str!("../../drawing.json");
 
     let strokes = serde_json::from_str::<Vec<Stroke>>(&strokes_string).unwrap();
 
@@ -59,10 +61,13 @@ fn main() {
         }
     }
 
-    let generated_output = img.to_vec();
-    println!("{:?}", img.to_vec());
-    let equal = output_image.to_vec().eq(&generated_output);
+    let error = root_mean_squared_error(&img, &output_image);
+    println!("RMSE: {:?}", error);
+    println!("{:?}", output_image.to_vec().len());
+
+    let equal = error < THRESHOLD;
 
     println!("same image? {:?}", equal);
     sp1_zkvm::io::commit(&equal);
+    sp1_zkvm::io::commit(&output_image.to_vec());
 }

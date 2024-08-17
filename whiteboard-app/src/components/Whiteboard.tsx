@@ -11,6 +11,29 @@ interface Stroke {
   color: [number, number, number]; // RGB color tuple
 }
 
+const drawLineBresenham = (ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) => {
+  let dx = Math.abs(x1 - x0);
+  let dy = Math.abs(y1 - y0);
+  let sx = (x0 < x1) ? 1 : -1;
+  let sy = (y0 < y1) ? 1 : -1;
+  let err = dx - dy;
+
+  while (true) {
+    ctx.fillRect(x0, y0, 1, 1); // Draw a single pixel
+
+    if (x0 === x1 && y0 === y1) break;
+    let e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+};
+
 const Whiteboard: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
@@ -46,8 +69,9 @@ const Whiteboard: React.FC = () => {
     const { offsetX, offsetY } = event.nativeEvent;
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      ctx.lineTo(offsetX, offsetY);
-      ctx.stroke();
+      const lastStroke = strokes[strokes.length - 1];
+      ctx.fillStyle = `rgb(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]})`;
+      drawLineBresenham(ctx, lastStroke.x, lastStroke.y, offsetX, offsetY);
       setStrokes(prevStrokes => [
         ...prevStrokes,
         { stroke_type: 'Draw', x: offsetX, y: offsetY, color: currentColor }
@@ -106,18 +130,25 @@ const Whiteboard: React.FC = () => {
     if (ctx) {
       ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
       initializeCanvas(); // Reinitialize to ensure black background
+
+      let lastX: number | null = null;
+      let lastY: number | null = null;
+
       loadedStrokes.forEach((stroke) => {
-        ctx.strokeStyle = `rgb(${stroke.color[0]}, ${stroke.color[1]}, ${stroke.color[2]})`;
+        ctx.fillStyle = `rgb(${stroke.color[0]}, ${stroke.color[1]}, ${stroke.color[2]})`;
+
         if (stroke.stroke_type === 'Begin') {
-          ctx.beginPath();
-          ctx.moveTo(stroke.x, stroke.y);
-        } else if (stroke.stroke_type === 'Draw') {
-          ctx.lineTo(stroke.x, stroke.y);
-          ctx.stroke();
+          lastX = stroke.x;
+          lastY = stroke.y;
+        } else if (stroke.stroke_type === 'Draw' && lastX !== null && lastY !== null) {
+          drawLineBresenham(ctx, lastX, lastY, stroke.x, stroke.y);
+          lastX = stroke.x;
+          lastY = stroke.y;
         }
       });
     }
   };
+
 
   const handleColorChange = (color: string, index: number) => {
     const rgb = [...currentColor] as [number, number, number];
@@ -134,8 +165,8 @@ const Whiteboard: React.FC = () => {
     <div>
       <canvas
         ref={canvasRef}
-        width={800}
-        height={600}
+        width={400}
+        height={400}
         style={{ border: '1px solid black' }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
