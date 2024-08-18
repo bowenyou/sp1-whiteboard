@@ -3686,17 +3686,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "photo-editor"
-version = "0.1.0"
-dependencies = [
- "image",
- "imageproc",
- "serde",
- "serde_json",
- "sp1-zkvm",
-]
-
-[[package]]
 name = "pin-project"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3882,6 +3871,17 @@ checksum = "8021cf59c8ec9c432cfc2526ac6b8aa508ecaf29cd415f271b8406c1b851c3fd"
 dependencies = [
  "quote",
  "syn 2.0.74",
+]
+
+[[package]]
+name = "program"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "imageproc",
+ "serde",
+ "serde_json",
+ "sp1-zkvm",
 ]
 
 [[package]]

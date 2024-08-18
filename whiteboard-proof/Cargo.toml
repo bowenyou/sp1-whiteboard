@@ -1,8 +1,5 @@
 [workspace]
 members = ["script", "program"]
-name = "photo-editor"
-version = "0.1.0"
-edition = "2021"
 
 resolver = "2"
 

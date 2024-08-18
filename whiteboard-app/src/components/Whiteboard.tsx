@@ -89,8 +89,6 @@ const Whiteboard: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // const generateProof = {}; // TODO
-
   const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const color = event.target.value;
     const rgb = hexToRgb(color);
@@ -133,7 +131,6 @@ const Whiteboard: React.FC = () => {
         <button className="button" onClick={resetCanvas}>Reset</button>
         <button className="button" onClick={saveDrawingAsImage}>Save as PNG</button>
         <button className="button" onClick={saveDrawingAsJSON}>Save as JSON</button>
-        {/* <button className="button" onClick={generateProof}>Generate Proof</button> */}
         <label className="colorLabel">
           <span>Select Color:</span>
           <input 
