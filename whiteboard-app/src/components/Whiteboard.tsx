@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useRef, useState, MouseEvent } from 'react';
+import './Whiteboard.css'; // Import the CSS file
 
 type StrokeType = 'Begin' | 'Draw';
 
@@ -11,40 +10,17 @@ interface Stroke {
   color: [number, number, number]; // RGB color tuple
 }
 
-const drawLineBresenham = (ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) => {
-  let dx = Math.abs(x1 - x0);
-  let dy = Math.abs(y1 - y0);
-  let sx = (x0 < x1) ? 1 : -1;
-  let sy = (y0 < y1) ? 1 : -1;
-  let err = dx - dy;
-
-  while (true) {
-    ctx.fillRect(x0, y0, 1, 1); // Draw a single pixel
-
-    if (x0 === x1 && y0 === y1) break;
-    let e2 = 2 * err;
-    if (e2 > -dy) {
-      err -= dy;
-      x0 += sx;
-    }
-    if (e2 < dx) {
-      err += dx;
-      y0 += sy;
-    }
-  }
-};
-
 const Whiteboard: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [currentColor, setCurrentColor] = useState<[number, number, number]>([255, 255, 255]); // Default to white
+  const [currentColor, setCurrentColor] = useState<[number, number, number]>([0, 0, 0]); // Default to black
 
-  // Initialize the canvas with a black background
+  // Initialize the canvas with a white background
   const initializeCanvas = () => {
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = 'black';
+      ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
     }
   };
@@ -69,9 +45,8 @@ const Whiteboard: React.FC = () => {
     const { offsetX, offsetY } = event.nativeEvent;
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      const lastStroke = strokes[strokes.length - 1];
-      ctx.fillStyle = `rgb(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]})`;
-      drawLineBresenham(ctx, lastStroke.x, lastStroke.y, offsetX, offsetY);
+      ctx.lineTo(offsetX, offsetY);
+      ctx.stroke();
       setStrokes(prevStrokes => [
         ...prevStrokes,
         { stroke_type: 'Draw', x: offsetX, y: offsetY, color: currentColor }
@@ -114,100 +89,55 @@ const Whiteboard: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const loadDrawing = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = function() {
-      const json = reader.result as string;
-      const loadedStrokes: Stroke[] = JSON.parse(json);
-      setStrokes(loadedStrokes);
-      redraw(loadedStrokes);
-    };
-    reader.readAsText(file);
-  };
-
-  const redraw = (loadedStrokes: Stroke[]) => {
-    const ctx = canvasRef.current?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-      initializeCanvas(); // Reinitialize to ensure black background
-
-      let lastX: number | null = null;
-      let lastY: number | null = null;
-
-      loadedStrokes.forEach((stroke) => {
-        ctx.fillStyle = `rgb(${stroke.color[0]}, ${stroke.color[1]}, ${stroke.color[2]})`;
-
-        if (stroke.stroke_type === 'Begin') {
-          lastX = stroke.x;
-          lastY = stroke.y;
-        } else if (stroke.stroke_type === 'Draw' && lastX !== null && lastY !== null) {
-          drawLineBresenham(ctx, lastX, lastY, stroke.x, stroke.y);
-          lastX = stroke.x;
-          lastY = stroke.y;
-        }
-      });
+  const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const color = event.target.value;
+    const rgb = hexToRgb(color);
+    if (rgb) {
+      setCurrentColor(rgb);
     }
   };
 
-
-  const handleColorChange = (color: string, index: number) => {
-    const rgb = [...currentColor] as [number, number, number];
-    rgb[index] = parseInt(color, 10);
-    setCurrentColor(rgb);
+  const hexToRgb = (hex: string): [number, number, number] | null => {
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] as [number, number, number] : null;
   };
 
-  // Ensure canvas is initialized with a black background on mount
+  // Ensure canvas is initialized with a white background on mount
   React.useEffect(() => {
     initializeCanvas();
   }, []);
 
   return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        width={400}
-        height={400}
-        style={{ border: '1px solid black' }}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-      />
-      <div>
-        <button onClick={resetCanvas}>Reset</button>
-        <button onClick={saveDrawingAsImage}>Save as PNG</button>
-        <button onClick={saveDrawingAsJSON}>Save as JSON</button>
-        <input type="file" onChange={(e) => loadDrawing(e.target.files![0])} />
+    <div className="container">
+      <div className="whiteboardWrapper">
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={600}
+          className="canvas"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+        />
       </div>
-      <div>
-        <label>
-          R:
-          <input
-            type="number"
-            min="0"
-            max="255"
-            value={currentColor[0]}
-            onChange={(e) => handleColorChange(e.target.value, 0)}
-          />
-        </label>
-        <label>
-          G:
-          <input
-            type="number"
-            min="0"
-            max="255"
-            value={currentColor[1]}
-            onChange={(e) => handleColorChange(e.target.value, 1)}
-          />
-        </label>
-        <label>
-          B:
-          <input
-            type="number"
-            min="0"
-            max="255"
-            value={currentColor[2]}
-            onChange={(e) => handleColorChange(e.target.value, 2)}
+      <div className="controls">
+        <button className="button" onClick={resetCanvas}>Reset</button>
+        <button className="button" onClick={saveDrawingAsImage}>Save as PNG</button>
+        <button className="button" onClick={saveDrawingAsJSON}>Save as JSON</button>
+        <label className="colorLabel">
+          <span>Select Color:</span>
+          <input 
+            type="color" 
+            onChange={handleColorChange} 
+            value={`#${((1 << 24) + (currentColor[0] << 16) + (currentColor[1] << 8) + currentColor[2]).toString(16).slice(1)}`} 
+            className="colorPicker"
           />
         </label>
       </div>
@@ -216,5 +146,3 @@ const Whiteboard: React.FC = () => {
 };
 
 export default Whiteboard;
-
-
